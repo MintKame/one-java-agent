@@ -24,11 +24,10 @@ public class TraceConfiguration {
         if (tracer == null) {  
             Properties prop = new Properties();
             prop.load(TraceConfiguration.class.getResourceAsStream("/trace.properties"));
-            String appName = prop.getProperty("appName");
             String jaegerHost = prop.getProperty("jaegerHost");
             int jaegerPort = Integer.valueOf(prop.getProperty("jaegerPort")); 
             openTelemetry = initOpenTelemetry(jaegerHost, jaegerPort);  
-            tracer = openTelemetry.getTracer(appName);
+            tracer = openTelemetry.getTracer("onejavaagent-trace");
         }  
         return tracer;  
     }  

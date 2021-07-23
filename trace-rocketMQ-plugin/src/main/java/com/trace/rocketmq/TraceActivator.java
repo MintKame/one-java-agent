@@ -1,4 +1,4 @@
-package com.trace;
+package com.trace.rocketmq;
 
 import com.alibaba.oneagent.plugin.PluginActivator;
 import com.alibaba.oneagent.plugin.PluginContext;

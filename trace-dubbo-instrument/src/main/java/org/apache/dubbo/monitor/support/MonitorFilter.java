@@ -2,14 +2,6 @@ package org.apache.dubbo.monitor.support;
 
 import com.trace.configuration.TraceConfiguration;
 
-import org.apache.dubbo.common.constants.CommonConstants;
-import org.apache.dubbo.common.URL;
-import org.apache.dubbo.rpc.Invocation;
-import org.apache.dubbo.rpc.Invoker;
-import org.apache.dubbo.rpc.Result;
-import org.apache.dubbo.rpc.RpcContext;
-import org.apache.dubbo.rpc.RpcException;
-
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -19,6 +11,14 @@ import io.opentelemetry.context.Scope;
 
 import com.alibaba.bytekit.agent.inst.Instrument;
 import com.alibaba.bytekit.agent.inst.InstrumentApi;
+
+import org.apache.dubbo.common.constants.CommonConstants;
+import org.apache.dubbo.common.URL;
+import org.apache.dubbo.rpc.Invocation;
+import org.apache.dubbo.rpc.Invoker;
+import org.apache.dubbo.rpc.Result;
+import org.apache.dubbo.rpc.RpcContext;
+import org.apache.dubbo.rpc.RpcException;
 
 @Instrument(Class = "org.apache.dubbo.monitor.support.MonitorFilter")
 public abstract class MonitorFilter { 
@@ -30,11 +30,6 @@ public abstract class MonitorFilter {
         URL requestURL = invoker.getUrl();
         String host = requestURL.getHost();
         int port = requestURL.getPort();
-
-        System.err.println("isConsumer: " + isConsumer);
-        System.err.println("requestURL: " + requestURL);
-        System.err.println("host: " + host);
-        System.err.println("port: " + port);
 
         // operation name
         String opName = requestURL.getParameter(CommonConstants.GROUP_KEY);
@@ -54,18 +49,16 @@ public abstract class MonitorFilter {
                 .startSpan();  
         }
         span.setAttribute("requestURL", requestURL.toString());
-        span.setAttribute("host", host);
-        span.setAttribute("port", String.valueOf(port));
+        span.setAttribute("peer", host + String.valueOf(port));
 
         // Set the context with the current span
         Scope scope = null;
         try {
             scope = span.makeCurrent();
 
-            Result result = InstrumentApi.invokeOrigin();
-            System.err.println("result: " + result);
+            Result result = InstrumentApi.invokeOrigin(); 
             if (result != null && result.getException() != null) {
-                System.err.println("exception: " + result.getException());
+                span.setStatus(StatusCode.ERROR, result.getException().getMessage()); // todo
             }
             return result;
         } catch(Throwable e){

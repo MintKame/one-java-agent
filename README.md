@@ -67,9 +67,8 @@ agentJarPath=demo-agent.jar
   + Docker 19.03
   + [Jaeger 1.16](https://www.jaegertracing.io/docs/1.16/getting-started/ )
 
-+ 配置[trace.property](trace-configuration/src/trace.properties)
++ 配置[trace.property](trace-configuration/src/main/resources/trace.properties)
 
-  + appName：用于设置tracer名
   + jaegerHost：Trace数据导出到jaeger（默认14250）
   + jaegerPort：Trace数据导出到jaeger（默认localhost）
 
