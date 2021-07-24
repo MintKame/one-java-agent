@@ -24,7 +24,6 @@
             <version>${project.version}</version>
         </dependency>
         
-        <!-- todo -->
         <dependency>
             <groupId>com.alibaba.oneagent</groupId> 
             <artifactId>trace-configuration</artifactId>

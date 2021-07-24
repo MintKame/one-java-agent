@@ -52,6 +52,9 @@
         <module>trace-dubbo-instrument</module>
         <module>trace-rocketMQ-plugin</module>
         <module>trace-rocketMQ-instrument</module>
+        <module>trace-httpClient-plugin</module>
+        <module>trace-httpClient-instrument</module>
+
     </modules>
 
     <properties>
