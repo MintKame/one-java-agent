@@ -71,6 +71,7 @@ agentJarPath=demo-agent.jar
 
   + jaegerHost：Trace数据导出到jaeger（默认14250）
   + jaegerPort：Trace数据导出到jaeger（默认localhost）
+  + applicationName：用于jaeger展示时区分application
 
 + 运行Jaeger
 

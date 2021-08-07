@@ -8,6 +8,7 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 
 import com.alibaba.bytekit.agent.inst.Instrument;
 import com.alibaba.bytekit.agent.inst.InstrumentApi;
@@ -43,8 +44,10 @@ public abstract class MQClientAPIImpl{
                 .setSpanKind(SpanKind.PRODUCER)
                 .startSpan();  
         
-        span.setAttribute("broker", addr);  
-        span.setAttribute("topic", msg.getTopic());  
+        span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ");
+        span.setAttribute(SemanticAttributes.MESSAGING_DESTINATION_KIND, "topic");
+        span.setAttribute(SemanticAttributes.MESSAGING_DESTINATION, msg.getTopic());  
+        span.setAttribute("messaging.rocketmq.broker_address", addr);  
         
         // Set the context with the current span
         Scope scope = null;
@@ -52,6 +55,8 @@ public abstract class MQClientAPIImpl{
             scope = span.makeCurrent();
             
             SendResult result = InstrumentApi.invokeOrigin();
+            span.setAttribute(SemanticAttributes.MESSAGING_MESSAGE_ID, result.getMsgId());
+            span.setAttribute("messaging.rocketmq.send_result", result.getSendStatus().name());
             return result;
         } catch(Throwable e){
             span.setStatus(StatusCode.ERROR, e.getMessage());

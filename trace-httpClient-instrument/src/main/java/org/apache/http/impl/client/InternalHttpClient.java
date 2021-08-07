@@ -1,12 +1,12 @@
 package org.apache.http.impl.client;
 
-
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
+import org.apache.http.client.methods.HttpUriRequest;
 
 import com.trace.configuration.TraceConfiguration;
 
@@ -15,10 +15,13 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import static io.opentelemetry.semconv.trace.attributes.SemanticAttributes.NetTransportValues.IP_TCP;
 
 import com.alibaba.bytekit.agent.inst.Instrument;
 import com.alibaba.bytekit.agent.inst.InstrumentApi;
-
+import java.net.URI;
+import java.net.URISyntaxException;
 
 @Instrument(Class = "org.apache.http.impl.client.InternalHttpClient")
 public abstract class InternalHttpClient{
@@ -40,32 +43,61 @@ public abstract class InternalHttpClient{
                 port = 80;
             }
         }
-        String remotePeer = target.getHostName() + ":" + port;
+        String host = target.getHostName();
 
-        String uri = request.getRequestLine().getUri();
-        boolean isUrl = uri.toLowerCase().startsWith("http");
-        String url = null;
-        if (isUrl) {
-            url = uri;
-        } else {
-            StringBuffer buff = new StringBuffer();
-            buff.append(target.getSchemeName().toLowerCase());
-            buff.append("://");
-            buff.append(remotePeer);
-            buff.append(uri);
-            url = buff.toString();
+        // flavor
+        String flavor = request.getProtocolVersion().toString();
+        if (flavor != null) {
+            String httpProtocolPrefix = "HTTP/";
+            if (flavor.startsWith(httpProtocolPrefix)) {
+                flavor = flavor.substring(httpProtocolPrefix.length());
+            }
         }
 
-        // 创建 span
+        // url
+        String uri;
+        if (request instanceof HttpUriRequest){
+            uri = request.getRequestLine().getUri();
+        } else{ 
+            try {
+                uri = new URI(target.toURI() + request.getRequestLine().getUri()).toString();
+            } catch (URISyntaxException e) {
+                uri = null;
+            } 
+        }
+
+        String url = null;
+        if (uri != null) {
+            boolean isUrl = uri.toLowerCase().startsWith("http");
+            if (isUrl) {
+                url = uri;
+            } else {
+                StringBuffer buff = new StringBuffer();
+                buff.append(target.getSchemeName().toLowerCase());
+                buff.append("://");
+                buff.append(host + ":" + port);
+                buff.append(uri);
+                url = buff.toString();
+            }
+        }
+
+        // 创建span
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder(uri)
                 .setSpanKind(SpanKind.CLIENT)
                 .startSpan();
 
-        span.setAttribute("url", url);
-        span.setAttribute("peer", remotePeer);
-        span.setAttribute("http.method", request.getRequestLine().getMethod());
-
+        // 设置attributes
+        span.setAttribute("component", "httpClient");
+        span.setAttribute(SemanticAttributes.NET_TRANSPORT, IP_TCP);
+        span.setAttribute(SemanticAttributes.HTTP_METHOD, request.getRequestLine().getMethod());
+        span.setAttribute(SemanticAttributes.HTTP_FLAVOR, flavor);
+        span.setAttribute(SemanticAttributes.NET_PEER_NAME, host);
+        span.setAttribute(SemanticAttributes.NET_PEER_PORT, port);
+        if (url != null) {
+            span.setAttribute(SemanticAttributes.HTTP_URL, url);
+        }
+        
         // Set the context with the current span
         Scope scope = null;
         try {
@@ -75,18 +107,25 @@ public abstract class InternalHttpClient{
 
             if(response != null){
                 StatusLine responseStatusLine = response.getStatusLine();
+                
                 if (responseStatusLine != null) {
-                    int statusCode = responseStatusLine.getStatusCode();
-                    if (statusCode >= 400) {
-                        span.setStatus(StatusCode.ERROR, "STATUS_CODE: " + Integer.toString(statusCode));
+                    Integer statusCode = responseStatusLine.getStatusCode();
+                    
+                    if (statusCode != null) {
+                        span.setAttribute(SemanticAttributes.HTTP_STATUS_CODE, (long) statusCode);
+                        
+                        if (statusCode < 100 || statusCode >= 400) {
+                            span.setStatus(StatusCode.ERROR, "STATUS_CODE: " + Integer.toString(statusCode));
+                        }  
                     }
                 }
             }
-
             return response;
         } catch(Throwable e){
+            
             span.setStatus(StatusCode.ERROR, e.getMessage());
             throw e;
+        
         }  finally {
             span.end();
             scope.close();

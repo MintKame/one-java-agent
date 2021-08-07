@@ -11,6 +11,7 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 
 import com.alibaba.bytekit.agent.inst.Instrument;
 import com.alibaba.bytekit.agent.inst.InstrumentApi;
@@ -24,6 +25,7 @@ public abstract class SendCallback{
         Span span = tracer.spanBuilder("RocketMQ/Producer/Callback")
                 .setSpanKind(SpanKind.PRODUCER)
                 .startSpan();  
+        span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ");
         
         // Set the context with the current span
         Scope scope = null;
@@ -50,7 +52,8 @@ public abstract class SendCallback{
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder("RocketMQ/Producer/Callback")
                 .setSpanKind(SpanKind.PRODUCER)
-                .startSpan();  
+                .startSpan(); 
+        span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ"); 
         
         // Set the context with the current span
         Scope scope = null;
