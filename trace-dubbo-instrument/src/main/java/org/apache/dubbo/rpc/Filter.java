@@ -1,6 +1,6 @@
 package org.apache.dubbo.rpc;
 
-import com.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -29,15 +29,19 @@ public abstract class Filter {
     
     Result invoke(Invoker<?> invoker, Invocation invocation) throws Throwable {
 
+        if(invocation == null || invoker == null){
+            return InstrumentApi.invokeOrigin(); 
+        }
+
+        RpcContext rpcContext = RpcContext.getContext(); 
+        boolean isConsumer = rpcContext.isConsumerSide();
         URL requestURL = invoker.getUrl(); 
         String methodName = invocation.getMethodName(); 
+
         // operation name
         String opName = requestURL.getParameter(CommonConstants.GROUP_KEY);
         opName = (opName == null || opName.length() == 0) ? "" : opName + "/";
         opName += requestURL.getPath() + "." + methodName;
-
-        RpcContext rpcContext = RpcContext.getContext();
-        boolean isConsumer = rpcContext.isConsumerSide();
 
         // net peer
         String peerName = null;
@@ -63,10 +67,12 @@ public abstract class Filter {
         if(isConsumer){
             span = tracer.spanBuilder(opName)  
                 .setSpanKind(SpanKind.CONSUMER)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan(); 
         }else {
             span = tracer.spanBuilder(opName)
                 .setSpanKind(SpanKind.PRODUCER)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan();  
         }
 
@@ -87,7 +93,7 @@ public abstract class Filter {
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = span.makeCurrent();
+            scope = TraceConfiguration.getContext().makeCurrent();
 
             Result result = InstrumentApi.invokeOrigin(); 
             if (result != null && result.getException() != null) {

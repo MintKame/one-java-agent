@@ -8,7 +8,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpUriRequest;
 
-import com.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -85,6 +85,7 @@ public abstract class InternalHttpClient{
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder(uri)
                 .setSpanKind(SpanKind.CLIENT)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan();
 
         // 设置attributes
@@ -101,7 +102,7 @@ public abstract class InternalHttpClient{
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = span.makeCurrent();
+            scope = TraceConfiguration.getContext().makeCurrent();
 
             CloseableHttpResponse response = InstrumentApi.invokeOrigin();
 

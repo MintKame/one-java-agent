@@ -1,6 +1,6 @@
 package org.apache.rocketmq.client.producer;
 
-import com.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
 
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.SendStatus;
@@ -24,20 +24,21 @@ public abstract class SendCallback{
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder("RocketMQ/Producer/Callback")
                 .setSpanKind(SpanKind.PRODUCER)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan();  
         span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ");
         
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = span.makeCurrent();
+            scope = TraceConfiguration.getContext().makeCurrent();
 
+            InstrumentApi.invokeOrigin(); 
+            
             SendStatus sendStatus = sendResult.getSendStatus();
             if (sendStatus != SendStatus.SEND_OK) {
                 span.setStatus(StatusCode.ERROR,  sendStatus.name());
-            } 
-            
-            InstrumentApi.invokeOrigin(); 
+            }
         } catch(Throwable e){
             span.setStatus(StatusCode.ERROR, e.getMessage()); 
             throw e;
@@ -52,13 +53,14 @@ public abstract class SendCallback{
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder("RocketMQ/Producer/Callback")
                 .setSpanKind(SpanKind.PRODUCER)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan(); 
         span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ"); 
         
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = span.makeCurrent();
+            scope = TraceConfiguration.getContext().makeCurrent();
 
             InstrumentApi.invokeOrigin();
             

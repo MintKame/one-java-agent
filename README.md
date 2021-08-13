@@ -70,9 +70,8 @@ agentJarPath=demo-agent.jar
 + 配置[trace.property](trace-configuration/src/main/resources/trace.properties)
 
   + jaegerHost：Trace数据导出到jaeger（默认14250）
-  + jaegerPort：Trace数据导出到jaeger（默认localhost）
-  + applicationName：用于jaeger展示时区分application
-
+  + jaegerPort：Trace数据导出到jaeger（默认localhost） 
+  
 + 运行Jaeger
 
   ```shell script

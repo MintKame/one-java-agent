@@ -1,6 +1,6 @@
 package org.apache.rocketmq.client.impl;
 
-import com.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -38,10 +38,16 @@ public abstract class MQClientAPIImpl{
         final int retryTimesWhenSendFailed,
         final SendMessageContext context,
         final DefaultMQProducerImpl producer)  throws Throwable  {
+        
+        if(msg == null){
+            return InstrumentApi.invokeOrigin();
+        }
+        
         // 创建 span
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder("RocketMQ/" + msg.getTopic() + "/Producer")
                 .setSpanKind(SpanKind.PRODUCER)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan();  
         
         span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ");
@@ -52,7 +58,7 @@ public abstract class MQClientAPIImpl{
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = span.makeCurrent();
+            scope = TraceConfiguration.getContext().makeCurrent();
             
             SendResult result = InstrumentApi.invokeOrigin();
             span.setAttribute(SemanticAttributes.MESSAGING_MESSAGE_ID, result.getMsgId());

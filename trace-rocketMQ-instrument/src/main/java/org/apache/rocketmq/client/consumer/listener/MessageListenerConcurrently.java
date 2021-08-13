@@ -1,6 +1,6 @@
 package org.apache.rocketmq.client.consumer.listener;
 
-import com.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -22,11 +22,17 @@ public abstract class MessageListenerConcurrently{
 
     ConsumeConcurrentlyStatus consumeMessage(final List<MessageExt> msgs,
     final ConsumeConcurrentlyContext context)throws Throwable{
+
+        if(msgs == null || msgs.isEmpty()){
+            return InstrumentApi.invokeOrigin();
+        }
+        MessageExt msg = msgs.get(0);
+
         // 创建 span
         Tracer tracer = TraceConfiguration.getTracer();
-        MessageExt msg = msgs.get(0);
         Span span = tracer.spanBuilder("RocketMQ/" + msg.getTopic() + "/Consumer")
                 .setSpanKind(SpanKind.CONSUMER)
+                .setParent(TraceConfiguration.getContext()) 
                 .startSpan();  
         span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ");
         span.setAttribute(SemanticAttributes.MESSAGING_DESTINATION_KIND, "topic");
@@ -35,7 +41,7 @@ public abstract class MessageListenerConcurrently{
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = span.makeCurrent();
+            scope = TraceConfiguration.getContext().makeCurrent();
 
             ConsumeConcurrentlyStatus status = InstrumentApi.invokeOrigin();
             if (status == ConsumeConcurrentlyStatus.RECONSUME_LATER) {
