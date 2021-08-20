@@ -17,11 +17,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.resources.ResourceBuilder;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor; 
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
-
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.apache.maven.model.Model;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import io.opentelemetry.semconv.resource.attributes.ResourceAttributes; 
 
 import java.util.concurrent.TimeUnit;
 import java.util.Properties;
@@ -46,10 +42,13 @@ public class TraceConfiguration {
             Properties prop = new Properties();
             prop.load(TraceConfiguration.class.getResourceAsStream("/trace.properties"));
 
-            String jaegerHost = prop.getProperty("jaegerHost").trim();
+            String jaegerHost = System.getenv("JAEGER_AGENT_HOST");
+            if (jaegerHost == null || jaegerHost.equals(""))
+                jaegerHost = "127.0.0.1";
             int jaegerPort = Integer.valueOf(prop.getProperty("jaegerPort").trim());  
+            String serviceName = prop.getProperty("appName").trim();
 
-            initOpenTelemetry(jaegerHost, jaegerPort);  
+            initOpenTelemetry(jaegerHost, jaegerPort, serviceName);  
 
             // 设置tracer和parentSpan
             tracer = GlobalOpenTelemetry.getTracer("com.alibaba.oneagent.trace");
@@ -73,7 +72,7 @@ public class TraceConfiguration {
     /**
      * Initialize an OpenTelemetry SDK with a Jaeger exporter and a SimpleSpanProcessor.
      */
-    private static void initOpenTelemetry(String jaegerHost, int jaegerPort) {
+    private static void initOpenTelemetry(String jaegerHost, int jaegerPort, String serviceName) {
         
         // Create a channel towards Jaeger end point
         ManagedChannel jaegerChannel =
@@ -89,7 +88,8 @@ public class TraceConfiguration {
         ResourceBuilder resourceBuilder =
             new ResourceBuilder()
                 .putAll(Resource.getDefault())
-                .put(ResourceAttributes.SERVICE_NAME, "otrl-" + getServiceName() );  
+                .put(ResourceAttributes.SERVICE_NAME, 
+                    "otel-" + (serviceName.isEmpty() ? "appName" : serviceName));  
         
         // Set to process the spans by the Jaeger Exporter
         final SdkTracerProvider tracerProvider =
@@ -114,39 +114,5 @@ public class TraceConfiguration {
                 tracerProvider.close();
             }
         })); 
-    }
-
-    private static String getServiceName(){
-        String serviceName = "";
-        // get path of pom
-        String myPom = new File(Thread.currentThread()
-                .getStackTrace()[1]
-                .getClassName()
-                .getClass()
-                .getResource("/")
-                .getPath()).getParentFile().getParent()
-                + File.separator + "pom.xml"; 
-        
-        // get ArtifactId from the pom
-        FileReader fileReader = null;
-        try {
-            fileReader = new FileReader(myPom);
-            MavenXpp3Reader reader = new MavenXpp3Reader();
-            Model model = reader.read(fileReader);
-            serviceName = model.getArtifactId();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (XmlPullParserException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
-            try {
-                fileReader.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return serviceName;
-        }
-    }
+    } 
 } 

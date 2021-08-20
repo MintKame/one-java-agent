@@ -34,7 +34,12 @@ public abstract class Filter {
         }
 
         RpcContext rpcContext = RpcContext.getContext(); 
-        boolean isConsumer = rpcContext.isConsumerSide();
+        Boolean isConsumer = null;
+        try{
+            isConsumer = rpcContext.isConsumerSide();
+        }catch(Throwable t){
+            isConsumer = null;
+        }
         URL requestURL = invoker.getUrl(); 
         String methodName = invocation.getMethodName(); 
 
@@ -46,7 +51,6 @@ public abstract class Filter {
         // net peer
         String peerName = null;
         String peerIp = null;
-        String peerService = null;
         int port = 0;
         InetSocketAddress remoteConnection = rpcContext.getRemoteAddress();
         if (remoteConnection != null) {
@@ -64,7 +68,12 @@ public abstract class Filter {
         // 创建 span
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = null; 
-        if(isConsumer){
+        if(isConsumer == null){
+            span = tracer.spanBuilder(opName)   
+                .setParent(TraceConfiguration.getContext()) 
+                .startSpan(); 
+        }
+        else if(isConsumer){
             span = tracer.spanBuilder(opName)  
                 .setSpanKind(SpanKind.CONSUMER)
                 .setParent(TraceConfiguration.getContext()) 

@@ -67,24 +67,33 @@ agentJarPath=demo-agent.jar
   + Docker 19.03
   + [Jaeger 1.16](https://www.jaegertracing.io/docs/1.16/getting-started/ )
 
-+ 配置[trace.property](trace-configuration/src/main/resources/trace.properties)
+1. 配置[trace.property](trace-configuration/src/main/resources/trace.properties)
 
-  + jaegerHost：Trace数据导出到jaeger（默认14250）
-  + jaegerPort：Trace数据导出到jaeger（默认localhost） 
-  
-+ 运行Jaeger
+   appName：应用名，用于在jaeger中区分（默认appname）
 
-  ```shell script
-  docker run --rm -i --name jaeger -p 16686:16686 -p 14250:14250 jaegertracing/all-in-one:1.16
-  ```
+   jaegerPort：Trace数据导出到jaeger（默认14250） 
 
-  Jaeger UI 端口：默认16686
+2. 配置环境变量
 
-+ 运行Application
+   JAEGER_AGENT_HOST（若未设置，则为默认的localhost） 
 
-+ 查看Jaeger UI
+3. 运行Jaeger
 
-  http://localhost:16686
+```shell script
+docker run --rm -i --name jaeger -p 16686:16686 -p 14250:14250 jaegertracing/all-in-one:1.16
+```
+
+Jaeger UI 端口：默认16686
+
+4. 运行Application
+
+5. 查看Jaeger UI
+
+   http://localhost:16686
+
+   
+
++ demo：https://github.com/MintKame/one-java-agent-demo
 
 
 ## 编译开发
