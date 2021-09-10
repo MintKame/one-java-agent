@@ -62,10 +62,7 @@ agentJarPath=demo-agent.jar
 
 ## trace
 
-+ Prerequisites
-  + Java 1.8+
-  + Docker 19.03
-  + [Jaeger 1.16](https://www.jaegertracing.io/docs/1.16/getting-started/ )
++ demo：https://github.com/MintKame/one-java-agent-demo
 
 1. 配置[trace.property](trace-configuration/src/main/resources/trace.properties)
 
@@ -90,10 +87,6 @@ Jaeger UI 端口：默认16686
 5. 查看Jaeger UI
 
    http://localhost:16686
-
-   
-
-+ demo：https://github.com/MintKame/one-java-agent-demo
 
 
 ## 编译开发

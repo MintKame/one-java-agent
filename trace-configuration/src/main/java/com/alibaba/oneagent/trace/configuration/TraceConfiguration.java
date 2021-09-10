@@ -17,7 +17,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.resources.ResourceBuilder;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor; 
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes; 
+import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;  
 
 import java.util.concurrent.TimeUnit;
 import java.util.Properties;
@@ -28,9 +28,7 @@ import java.io.FileReader;
 
 public class TraceConfiguration {
 
-    private static Tracer tracer = null;
-
-    private static Context context = null;
+    private static Tracer tracer = null; 
 
     private static Span parentSpan = null;
 
@@ -54,8 +52,7 @@ public class TraceConfiguration {
             tracer = GlobalOpenTelemetry.getTracer("com.alibaba.oneagent.trace");
             try{
                 parentSpan = tracer.spanBuilder("/").startSpan();
-                scope = parentSpan.makeCurrent();
-                context = Context.current();
+                scope = parentSpan.makeCurrent(); 
             }catch(Throwable t){
                 // 创建parentSpan失败
                 parentSpan = null;
@@ -63,11 +60,7 @@ public class TraceConfiguration {
             }
         }  
         return tracer;  
-    }  
-
-    public static Context getContext(){
-        return context;
-    }
+    }   
 
     /**
      * Initialize an OpenTelemetry SDK with a Jaeger exporter and a SimpleSpanProcessor.
@@ -99,7 +92,7 @@ public class TraceConfiguration {
                 .build(); 
 
         OpenTelemetrySdk.builder()
-                .setTracerProvider(tracerProvider)
+                .setTracerProvider(tracerProvider) 
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))  
                 .buildAndRegisterGlobal();
 

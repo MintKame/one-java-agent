@@ -1,13 +1,18 @@
 package org.apache.rocketmq.client.impl;
 
 import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.Java8BytecodeBridge;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+
+import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.context.propagation.TextMapSetter;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 
 import com.alibaba.bytekit.agent.inst.Instrument;
@@ -21,6 +26,11 @@ import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.hook.SendMessageContext;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.client.producer.SendResult;
+
+import java.util.Map;
+
+import static org.apache.rocketmq.common.message.MessageDecoder.NAME_VALUE_SEPARATOR;
+import static org.apache.rocketmq.common.message.MessageDecoder.PROPERTY_SEPARATOR;
 
 @Instrument(Class = "org.apache.rocketmq.client.impl.MQClientAPIImpl")
 public abstract class MQClientAPIImpl{
@@ -47,7 +57,7 @@ public abstract class MQClientAPIImpl{
         Tracer tracer = TraceConfiguration.getTracer();
         Span span = tracer.spanBuilder("RocketMQ/" + msg.getTopic() + "/Producer")
                 .setSpanKind(SpanKind.PRODUCER)
-                .setParent(TraceConfiguration.getContext()) 
+                .setParent(Java8BytecodeBridge.currentContext()) 
                 .startSpan();  
         
         span.setAttribute(SemanticAttributes.MESSAGING_SYSTEM, "rocketMQ");
@@ -58,8 +68,30 @@ public abstract class MQClientAPIImpl{
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = TraceConfiguration.getContext().makeCurrent();
+            scope = span.makeCurrent();
+
+            // context propagation
+            StringBuilder properties = new StringBuilder(requestHeader.getProperties());
             
+            TextMapSetter<StringBuilder> setter = 
+                new TextMapSetter<StringBuilder>() {
+                    @Override
+                    public void set(StringBuilder carrier, String key, String value) {
+                        if (value != null && !value.equals("")) {
+                            carrier.append(key);
+                            carrier.append(NAME_VALUE_SEPARATOR);
+                            carrier.append(value);
+                            carrier.append(PROPERTY_SEPARATOR);
+                        }
+                    }
+                };
+
+            GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
+                .inject(Java8BytecodeBridge.currentContext(), properties, setter);
+            
+            requestHeader.setProperties(properties.toString());
+
+            // invoke origin
             SendResult result = InstrumentApi.invokeOrigin();
             span.setAttribute(SemanticAttributes.MESSAGING_MESSAGE_ID, result.getMsgId());
             span.setAttribute("messaging.rocketmq.send_result", result.getSendStatus().name());

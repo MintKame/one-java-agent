@@ -9,12 +9,16 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpUriRequest;
 
 import com.alibaba.oneagent.trace.configuration.TraceConfiguration;
+import com.alibaba.oneagent.trace.Java8BytecodeBridge;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.propagation.TextMapSetter;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import static io.opentelemetry.semconv.trace.attributes.SemanticAttributes.NetTransportValues.IP_TCP;
 
@@ -79,13 +83,13 @@ public abstract class InternalHttpClient{
                 buff.append(uri);
                 url = buff.toString();
             }
-        }
+        } 
 
         // 创建span
-        Tracer tracer = TraceConfiguration.getTracer();
+        Tracer tracer = TraceConfiguration.getTracer(); 
         Span span = tracer.spanBuilder(uri)
                 .setSpanKind(SpanKind.CLIENT)
-                .setParent(TraceConfiguration.getContext()) 
+                .setParent(Java8BytecodeBridge.currentContext()) 
                 .startSpan();
 
         // 设置attributes
@@ -102,10 +106,25 @@ public abstract class InternalHttpClient{
         // Set the context with the current span
         Scope scope = null;
         try {
-            scope = TraceConfiguration.getContext().makeCurrent();
+            scope = span.makeCurrent();
 
+            // context propagation
+            TextMapSetter<HttpRequest> setter = new TextMapSetter<HttpRequest>() {
+                @Override
+                public void set(HttpRequest carrier, String key, String value) {
+                    // Insert the context as Header
+                        if (carrier != null) {
+                            carrier.setHeader(key, value);
+                        }
+                }
+            };
+
+            GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
+                .inject(Java8BytecodeBridge.currentContext(), request, setter);
+            
+            // invoke origin
             CloseableHttpResponse response = InstrumentApi.invokeOrigin();
-
+                
             if(response != null){
                 StatusLine responseStatusLine = response.getStatusLine();
                 
