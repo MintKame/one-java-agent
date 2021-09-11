@@ -35,10 +35,9 @@ public class RestProvider {
         new CountDownLatch(1).await();
     }
 
+
     @Configuration
     @EnableDubbo(scanBasePackages = "org.apache.dubbo.samples.rest.impl.facade")
     static public class ProviderConfiguration {
-
     }
-
 }

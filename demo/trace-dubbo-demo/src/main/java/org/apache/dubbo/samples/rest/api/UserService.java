@@ -19,9 +19,6 @@
 package org.apache.dubbo.samples.rest.api;
 
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import org.apache.dubbo.rpc.protocol.rest.support.ContentType;
 
 import javax.ws.rs.Consumes;
@@ -34,13 +31,11 @@ import javax.ws.rs.core.MediaType;
 @Path("users")
 @Consumes({MediaType.APPLICATION_JSON, MediaType.TEXT_XML})
 @Produces({ContentType.APPLICATION_JSON_UTF_8, ContentType.TEXT_XML_UTF_8})
-@Api(value = "UserService")
 public interface UserService {
 
     @GET
     @Path("{id : \\d+}")
-    @ApiOperation(value = "getUser")
-    User getUser(@ApiParam(value = "id") @PathParam("id")Long id);
+    User getUser(@PathParam("id")Long id);
 
     Long registerUser(User user);
 }
