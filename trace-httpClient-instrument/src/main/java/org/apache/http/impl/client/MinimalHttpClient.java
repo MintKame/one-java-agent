@@ -14,8 +14,7 @@ import org.apache.http.protocol.HttpContext;
 
 import com.alibaba.bytekit.agent.inst.Instrument;
 import com.alibaba.bytekit.agent.inst.InstrumentApi;
-
-import io.opentelemetry.api.GlobalOpenTelemetry;
+ 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
@@ -28,9 +27,8 @@ import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 
 @Instrument(Class = "org.apache.http.impl.client.MinimalHttpClient")
 public abstract class MinimalHttpClient{
-    protected CloseableHttpResponse doExecute(
-            final HttpHost target,
-            final HttpRequest request,
+
+    protected CloseableHttpResponse doExecute(final HttpHost target, final HttpRequest request,
             final HttpContext context) throws Throwable {
         if (target == null || request == null) {
             // illegal args, can't trace. ignore.
@@ -38,10 +36,10 @@ public abstract class MinimalHttpClient{
         }
 
         int port = target.getPort();
-        if(port <= 0){
-            if("https".equals(target.getSchemeName().toLowerCase())){
+        if (port <= 0) {
+            if ("https".equals(target.getSchemeName().toLowerCase())) {
                 port = 443;
-            } else{
+            } else {
                 port = 80;
             }
         }
@@ -58,9 +56,9 @@ public abstract class MinimalHttpClient{
 
         // url
         String uri;
-        if (request instanceof HttpUriRequest){
+        if (request instanceof HttpUriRequest) {
             uri = request.getRequestLine().getUri();
-        } else{ 
+        } else { 
             try {
                 uri = new URI(target.toURI() + request.getRequestLine().getUri()).toString();
             } catch (URISyntaxException e) {
@@ -84,10 +82,8 @@ public abstract class MinimalHttpClient{
         }
 
         // 创建span
-        Tracer tracer = TraceConfiguration.getTracer();
-        Span span = tracer.spanBuilder(uri)
-                .setSpanKind(SpanKind.CLIENT)
-                .setParent(Java8BytecodeBridge.currentContext())  
+        Tracer tracer = TraceConfiguration.getTracer(true);
+        Span span = tracer.spanBuilder(uri).setSpanKind(SpanKind.CLIENT).setParent(Java8BytecodeBridge.currentContext())  
                 .startSpan();
 
         // 设置attributes
@@ -109,13 +105,13 @@ public abstract class MinimalHttpClient{
             // context propagation
             TextMapSetter<HttpRequest> setter = new TraceTextMapSetter();
 
-            GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
+            TraceConfiguration.getTextMapPropagator()
                 .inject(Java8BytecodeBridge.currentContext(), request, setter);
             
             // invoke origin
             CloseableHttpResponse response = InstrumentApi.invokeOrigin();
 
-            if(response != null){
+            if (response != null) {
                 StatusLine responseStatusLine = response.getStatusLine();
                 
                 if (responseStatusLine != null) {
@@ -131,12 +127,12 @@ public abstract class MinimalHttpClient{
                 }
             }
             return response;
-        } catch(Throwable e){
+        } catch (Throwable e) {
             
             span.setStatus(StatusCode.ERROR, e.getMessage());
             throw e;
         
-        }  finally {
+        } finally {
             span.end();
             scope.close();
         }

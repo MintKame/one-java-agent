@@ -15,7 +15,6 @@ import org.apache.http.protocol.HttpContext;
 import com.alibaba.bytekit.agent.inst.Instrument;
 import com.alibaba.bytekit.agent.inst.InstrumentApi;
 
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
@@ -83,7 +82,7 @@ public abstract class InternalHttpClient {
         }
 
         // 创建span
-        Tracer tracer = TraceConfiguration.getTracer();
+        Tracer tracer = TraceConfiguration.getTracer(true);
         Span span = tracer.spanBuilder(uri).setSpanKind(SpanKind.CLIENT).setParent(Java8BytecodeBridge.currentContext())
                 .startSpan();
 
@@ -106,8 +105,8 @@ public abstract class InternalHttpClient {
             // context propagation
             TextMapSetter<HttpRequest> setter = new TraceTextMapSetter();
 
-            GlobalOpenTelemetry.getPropagators().getTextMapPropagator().inject(Java8BytecodeBridge.currentContext(),
-                    request, setter);
+            TraceConfiguration.getTextMapPropagator()
+                .inject(Java8BytecodeBridge.currentContext(), request, setter);
 
             // invoke origin
             CloseableHttpResponse response = InstrumentApi.invokeOrigin();
@@ -138,5 +137,4 @@ public abstract class InternalHttpClient {
             scope.close();
         }
     }
-
 };

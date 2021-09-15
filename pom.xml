@@ -51,8 +51,12 @@
         <module>dubbo-test-plugin</module>
         <module>opentelemetry-plugin</module>
         <module>trace-configuration</module>
-        <module>trace-httpClient-instrument</module>
+        <module>trace-dubbo-plugin</module>
+        <module>trace-dubbo-instrument</module>
+        <module>trace-rocketMQ-plugin</module>
+        <module>trace-rocketMQ-instrument</module>
         <module>trace-httpClient-plugin</module>
+        <module>trace-httpClient-instrument</module> 
         <module>one-java-agent</module>
     </modules>
 
