@@ -57,6 +57,8 @@
         <module>trace-rocketMQ-instrument</module>
         <module>trace-httpClient-plugin</module>
         <module>trace-httpClient-instrument</module> 
+        <module>trace-tomcat-plugin</module>
+        <module>trace-tomcat-instrument</module>
         <module>one-java-agent</module>
     </modules>
 
